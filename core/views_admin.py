@@ -109,19 +109,27 @@ def admin_enrol_learner(request):
         return HttpResponseForbidden("403 Forbidden: Cannot enrol another client's learner.")
     course = get_object_or_404(Course, course_id=course_id, status="published")
 
-    prev_count = Enrolment.objects.filter(learner=learner, course__title=course.title).count()
-    enrolment_id = f"E{uuid.uuid4().hex[:7].upper()}"
-    Enrolment.objects.create(
-        enrolment_id=enrolment_id,
-        learner=learner,
-        course=course,
-        enrolled_on=date.today().isoformat(),
-        withdrawn_on="",
-        outcome="In Progress",
-        previous_attempts=prev_count,
-        activity_clicks=0,
-        enrolled_by=staff.staff_id,
+    active_run = (
+        Enrolment.objects.filter(learner=learner, course=course, withdrawn_on="")
+        .exclude(outcome__in=["Fail", "Pass", "Distinction", "Withdrawn"])
+        .first()
     )
+    if not active_run:
+        prev_count = Enrolment.objects.filter(
+            learner=learner, course__title=course.title
+        ).count()
+        enrolment_id = f"E{uuid.uuid4().hex[:7].upper()}"
+        Enrolment.objects.create(
+            enrolment_id=enrolment_id,
+            learner=learner,
+            course=course,
+            enrolled_on=date.today().isoformat(),
+            withdrawn_on="",
+            outcome="In Progress",
+            previous_attempts=prev_count,
+            activity_clicks=0,
+            enrolled_by=staff.staff_id,
+        )
     return redirect(f"/admin-portal/?q={learner.learner_id}")
 
 

@@ -41,9 +41,11 @@ def test_enrolment_withdrawal_reenrolment_and_reports(client):
         password_hash="password123",
     )
 
-    # Admin enrols learner
+    # Admin enrols learner (calling twice while active does not duplicate active run)
     client.post("/login/", {"username": "S001", "password": "password123"})
     client.post("/admin-portal/enrol/", {"learner_id": "L1", "course_id": "c1-2026-02"})
+    client.post("/admin-portal/enrol/", {"learner_id": "L1", "course_id": "c1-2026-02"})
+    assert Enrolment.objects.filter(learner=learner, course=course).count() == 1
     e1 = Enrolment.objects.get(learner=learner, course=course)
     assert e1.enrolled_by == "S001"
 
@@ -147,14 +149,15 @@ def test_end_to_end_journey(client):
         {"status": "published"},
     )
 
-    # 3. Learner signs in, enrols in the published course, and takes the quiz
+    # 3. Learner signs in, enrols in the published course, and takes the quiz twice (0% then 100%)
     client.post("/login/", {"username": "L99999", "password": "password123"})
     client.post("/learner/courses/applied-analytics-2026-10/enrol/")
     from core.models import QuizQuestion
     q = QuizQuestion.objects.get(assessment_id="Q9001")
+    client.post("/learner/assessments/Q9001/submit/", {f"q_{q.id}": "A"})
     client.post("/learner/assessments/Q9001/submit/", {f"q_{q.id}": "B"})
 
-    # 4. Instructor signs in and sees the learner's quiz result (100.0) on the cohort page and report
+    # 4. Instructor signs in and sees the learner's quiz result (avg_score=100.0 from MAX per assessment, not 50.0)
     client.post("/login/", {"username": "S007", "password": "password123"})
     edit_page = client.get("/instructor/courses/applied-analytics-2026-10/edit/")
     assert b"Zara Siddiqui" in edit_page.content
@@ -162,4 +165,5 @@ def test_end_to_end_journey(client):
 
     report_page = client.get("/instructor/reports/?course_id=applied-analytics-2026-10")
     assert b"Zara Siddiqui" in report_page.content
+    assert b"50.0" not in report_page.content
     assert b"100.0" in report_page.content

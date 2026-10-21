@@ -15,7 +15,8 @@ from core.models import (
 
 
 @pytest.mark.django_db
-def test_course_draft_visibility_quiz_autograde_and_retake_highest_score(client):
+def test_course_draft_visibility_quiz_autograde_and_retake_highest_score(client, settings, tmp_path):
+    settings.MEDIA_ROOT = tmp_path
     cl = Client.objects.create(client_id="CL01", name="C1", seats=100)
     inst1 = Staff.objects.create(
         staff_id="S007",

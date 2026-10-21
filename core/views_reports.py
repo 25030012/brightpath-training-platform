@@ -204,13 +204,23 @@ def _fetch_instructor_cohort_rows(course_ids, course_filter="", q="", limit=250)
                 e.enrolled_by,
                 e.outcome,
                 e.withdrawn_on,
-                COUNT(a.attempt_id) AS attempt_count,
-                ROUND(AVG(a.score), 1) AS avg_score,
-                MAX(a.score) AS max_score
+                COALESCE(SUM(ab.att_cnt), 0) AS attempt_count,
+                ROUND(AVG(ab.best_score), 1) AS avg_score,
+                MAX(ab.best_score) AS max_score
             FROM core_enrolment e
             JOIN core_learner l ON l.learner_id = e.learner_id
             JOIN core_course c ON c.course_id = e.course_id
-            LEFT JOIN core_attempt a ON a.learner_id = e.learner_id AND a.course_id = e.course_id
+            LEFT JOIN (
+                SELECT
+                    learner_id,
+                    course_id,
+                    assessment_id,
+                    COUNT(attempt_id) AS att_cnt,
+                    MAX(score) AS best_score
+                FROM core_attempt
+                WHERE course_id IN ({placeholders})
+                GROUP BY learner_id, course_id, assessment_id
+            ) ab ON ab.learner_id = e.learner_id AND ab.course_id = e.course_id
             WHERE e.course_id IN ({placeholders}) {extra_where}
             GROUP BY
                 e.enrolment_id, e.course_id, c.title, c.cohort,
@@ -219,7 +229,7 @@ def _fetch_instructor_cohort_rows(course_ids, course_filter="", q="", limit=250)
             ORDER BY e.course_id, e.enrolled_on DESC, l.learner_id
             {limit_clause}
             """,
-            params,
+            list(target_ids) + params,
         )
         rows = [
             {
