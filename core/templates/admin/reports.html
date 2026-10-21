@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="space-y-8">
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <a href="/admin-portal/" class="text-sm text-slate-600 hover:underline">← Back to People & Cohorts</a>
+      <h1 class="text-2xl font-bold mt-1">Administrator Progress & Completion Report</h1>
+      <p class="text-sm text-slate-600">
+        Completion by Client and by Department · Loaded across <strong>{{ total_attempts }}</strong> attempts in <strong>{{ elapsed_ms }} ms</strong> (&lt; 2,000 ms target).
+      </p>
+    </div>
+    <a href="/admin-portal/reports/csv/" class="bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-2 rounded text-sm">
+      ⬇ Download Report as CSV
+    </a>
+  </div>
+
+  <!-- Completion by Client -->
+  <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+    <h2 class="text-lg font-bold mb-4">Completion by Client</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-left border-collapse">
+        <thead>
+          <tr class="border-b border-slate-200 text-slate-600 bg-slate-50">
+            <th class="py-2 px-3">Client ID</th>
+            <th class="py-2 px-3">Client Name</th>
+            <th class="py-2 px-3">Seats</th>
+            <th class="py-2 px-3">Contract End</th>
+            <th class="py-2 px-3">Learners</th>
+            <th class="py-2 px-3">Enrolments</th>
+            <th class="py-2 px-3">Completed (Pass + Distinction)</th>
+            <th class="py-2 px-3">Withdrawn</th>
+            <th class="py-2 px-3">Failed</th>
+            <th class="py-2 px-3">Completion Rate</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for r in client_rows %}
+            <tr>
+              <td class="py-2 px-3 font-mono font-semibold">{{ r.client_id }}</td>
+              <td class="py-2 px-3 font-medium">{{ r.client_name }}</td>
+              <td class="py-2 px-3">{{ r.seats }}</td>
+              <td class="py-2 px-3 text-xs">{{ r.contract_end }}</td>
+              <td class="py-2 px-3">{{ r.total_learners }}</td>
+              <td class="py-2 px-3">{{ r.total_enrolments }}</td>
+              <td class="py-2 px-3 text-emerald-700 font-semibold">{{ r.completed_count }} ({{ r.distinction_count }} Distinction)</td>
+              <td class="py-2 px-3 text-amber-700">{{ r.withdrawn_count }}</td>
+              <td class="py-2 px-3 text-rose-700">{{ r.fail_count }}</td>
+              <td class="py-2 px-3 font-bold">{{ r.completion_rate }}%</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Completion by Department -->
+  <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+    <h2 class="text-lg font-bold mb-4">Completion by Client & Department ({{ dept_rows|length }} Department Groups)</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-left border-collapse">
+        <thead>
+          <tr class="border-b border-slate-200 text-slate-600 bg-slate-50">
+            <th class="py-2 px-3">Client</th>
+            <th class="py-2 px-3">Department</th>
+            <th class="py-2 px-3">Learners</th>
+            <th class="py-2 px-3">Enrolments</th>
+            <th class="py-2 px-3">Completed</th>
+            <th class="py-2 px-3">Withdrawn</th>
+            <th class="py-2 px-3">Failed</th>
+            <th class="py-2 px-3">Completion Rate</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for r in dept_rows %}
+            <tr>
+              <td class="py-2 px-3">{{ r.client_id }} — {{ r.client_name }}</td>
+              <td class="py-2 px-3 font-medium">{{ r.department }}</td>
+              <td class="py-2 px-3">{{ r.total_learners }}</td>
+              <td class="py-2 px-3">{{ r.total_enrolments }}</td>
+              <td class="py-2 px-3 text-emerald-700 font-semibold">{{ r.completed_count }}</td>
+              <td class="py-2 px-3 text-amber-700">{{ r.withdrawn_count }}</td>
+              <td class="py-2 px-3 text-rose-700">{{ r.fail_count }}</td>
+              <td class="py-2 px-3 font-bold">{{ r.completion_rate }}%</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

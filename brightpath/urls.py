@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import path
-from core import views_auth, views_admin, views_instructor, views_learner
+from core import views_auth, views_admin, views_instructor, views_learner, views_reports
 
 urlpatterns = [
     path("", views_auth.index_view, name="index"),
@@ -15,6 +15,8 @@ urlpatterns = [
     path("admin-portal/cohorts/<str:course_id>/staff/", views_admin.cohort_staff_view, name="cohort_staff"),
     path("admin-portal/cohorts/<str:course_id>/staff/assign/", views_admin.assign_cohort_staff, name="assign_cohort_staff"),
     path("admin-portal/cohorts/<str:course_id>/staff/<int:assignment_id>/unassign/", views_admin.unassign_cohort_staff, name="unassign_cohort_staff"),
+    path("admin-portal/reports/", views_reports.admin_reports, name="admin_reports"),
+    path("admin-portal/reports/csv/", views_reports.admin_reports_csv, name="admin_reports_csv"),
     # Instructor
     path("instructor/", views_instructor.instructor_home, name="instructor_home"),
     path("instructor/courses/create/", views_instructor.create_course, name="create_course"),
@@ -24,6 +26,8 @@ urlpatterns = [
     path("instructor/courses/<str:course_id>/assessments/create/", views_instructor.create_assessment, name="create_assessment"),
     path("instructor/assessments/<str:assessment_id>/publish/", views_instructor.publish_assessment, name="publish_assessment"),
     path("instructor/attempts/<str:attempt_id>/grade/", views_instructor.grade_attempt, name="grade_attempt"),
+    path("instructor/reports/", views_reports.instructor_reports, name="instructor_reports"),
+    path("instructor/reports/csv/", views_reports.instructor_reports_csv, name="instructor_reports_csv"),
     # Learner
     path("learner/", views_learner.learner_home, name="learner_home"),
     path("learner/courses/<str:course_id>/", views_learner.learner_course_detail, name="learner_course_detail"),
