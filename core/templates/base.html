@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BrightPath Training Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col">
+  <header class="bg-slate-900 text-white shadow">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-6">
+        <a href="/" class="text-xl font-bold tracking-tight text-amber-400">BrightPath</a>
+        {% if current_role == "administrator" %}
+          <nav class="flex gap-4 text-sm font-medium">
+            <a href="/admin-portal/" class="hover:text-amber-300">People & Cohorts</a>
+            <a href="/admin-portal/reports/" class="hover:text-amber-300">Completion Reports</a>
+          </nav>
+        {% elif current_role == "instructor" %}
+          <nav class="flex gap-4 text-sm font-medium">
+            <a href="/instructor/" class="hover:text-amber-300">My Courses & Assessments</a>
+            <a href="/instructor/reports/" class="hover:text-amber-300">Cohort Results Report</a>
+          </nav>
+        {% elif current_role == "learner" %}
+          <nav class="flex gap-4 text-sm font-medium">
+            <a href="/learner/" class="hover:text-amber-300">My Learning & Catalogue</a>
+          </nav>
+        {% endif %}
+      </div>
+      <div class="flex items-center gap-4 text-sm">
+        {% if current_user_id %}
+          <span class="bg-slate-800 px-3 py-1 rounded border border-slate-700">
+            <strong>{{ current_user_name }}</strong> ({{ current_user_id }} · <span class="uppercase text-xs text-amber-400">{{ current_role }}</span>{% if current_client_id %} · {{ current_client_id }}{% endif %})
+          </span>
+          <a href="/logout/" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1 rounded font-medium">Sign out</a>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl w-full mx-auto px-4 py-6 flex-1">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
