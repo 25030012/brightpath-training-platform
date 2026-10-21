@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="space-y-8">
+  <div class="flex items-center justify-between">
+    <div>
+      <a href="/learner/" class="text-sm text-slate-600 hover:underline">← Back to My Learning</a>
+      <h1 class="text-2xl font-bold mt-1">{{ course.title }} ({{ course.cohort }})</h1>
+      <p class="text-sm text-slate-600">{{ course.description }}</p>
+    </div>
+    <form method="post" action="/learner/courses/{{ course.course_id }}/enrol/">
+      <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-semibold px-4 py-2 rounded">
+        Enrol / Start New Run
+      </button>
+    </form>
+  </div>
+
+  <!-- Enrolment Runs in this Cohort -->
+  {% if enrolments %}
+    <div class="bg-white p-4 rounded-xl border border-slate-200 text-xs space-y-1">
+      <div class="font-bold text-slate-800 mb-1">Your Enrolment Runs on This Cohort:</div>
+      {% for e in enrolments %}
+        <div>
+          Run <code>{{ e.enrolment_id }}</code> — Enrolled on {{ e.enrolled_on }} by <strong>{{ e.enrolled_by }}</strong> · Outcome: <strong>{{ e.outcome }}</strong>
+          {% if e.withdrawn_on %}(Withdrawn on {{ e.withdrawn_on }}){% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- Course Content Pages -->
+  <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+    <h2 class="text-lg font-bold">Course Material Pages</h2>
+    {% for p in pages %}
+      <article class="border border-slate-200 rounded-lg p-4 bg-slate-50 space-y-3">
+        <h3 class="font-bold text-base">{{ p.order }}. {{ p.title }}</h3>
+        <div class="text-sm text-slate-800 whitespace-pre-line">{{ p.body_text }}</div>
+        {% if p.image_path %}
+          <img src="{{ p.image_path }}" alt="{{ p.title }}" class="max-h-64 rounded border border-slate-300" />
+        {% endif %}
+        {% if p.pdf_path %}
+          <div>
+            <a href="{{ p.pdf_path }}" target="_blank" class="inline-block bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded">
+              📄 Download / View PDF Resource
+            </a>
+          </div>
+        {% endif %}
+      </article>
+    {% empty %}
+      <p class="text-sm text-slate-500">No reading pages published for this cohort yet.</p>
+    {% endfor %}
+  </div>
+
+  <!-- Published Quizzes & Assignments (Retake Rule: Highest Score Counts, Every Attempt Kept) -->
+  <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-6">
+    <div>
+      <h2 class="text-lg font-bold">Published Quizzes & Assignments</h2>
+      <p class="text-xs text-slate-600">Retake Rule: Every attempt is permanently recorded; your <strong>highest score</strong> across attempts counts toward your grade.</p>
+    </div>
+
+    {% for a in assessments %}
+      <div class="border border-slate-200 rounded-lg p-4 bg-slate-50 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <span class="text-xs font-mono text-slate-500">{{ a.assessment_id }}</span>
+            <h3 class="font-bold text-base">{{ a.title }} <span class="text-xs font-normal text-slate-600">({{ a.type }} · Weight {{ a.weight_pct }}% · Due {{ a.due_on|default:"N/A" }})</span></h3>
+          </div>
+          <div class="text-sm">
+            Effective Score (Highest):
+            {% if a.highest_score != None %}
+              <span class="bg-emerald-100 text-emerald-900 font-bold px-2.5 py-1 rounded">{{ a.highest_score }}%</span>
+            {% else %}
+              <span class="bg-slate-200 text-slate-700 px-2.5 py-1 rounded text-xs">Not graded / Not taken</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Take / Retake Form -->
+        <form method="post" action="/learner/assessments/{{ a.assessment_id }}/submit/" class="space-y-3 bg-white p-4 rounded border border-slate-200 text-sm">
+          {% if a.type == "Quiz" %}
+            {% for q in a.questions.all %}
+              <div class="space-y-1">
+                <div class="font-semibold">{{ forloop.counter }}. {{ q.prompt }}</div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <label class="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-slate-50">
+                    <input type="radio" name="q_{{ q.id }}" value="A" required /> A) {{ q.option_a }}
+                  </label>
+                  <label class="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-slate-50">
+                    <input type="radio" name="q_{{ q.id }}" value="B" required /> B) {{ q.option_b }}
+                  </label>
+                  <label class="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-slate-50">
+                    <input type="radio" name="q_{{ q.id }}" value="C" required /> C) {{ q.option_c }}
+                  </label>
+                  <label class="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-slate-50">
+                    <input type="radio" name="q_{{ q.id }}" value="D" required /> D) {{ q.option_d }}
+                  </label>
+                </div>
+              </div>
+            {% empty %}
+              <p class="text-xs text-slate-500">Historical spreadsheet quiz (no live MCQ questions attached).</p>
+            {% endfor %}
+          {% else %}
+            <div>
+              <label class="block font-medium text-xs text-slate-700 mb-1">Your Assignment Submission</label>
+              <textarea name="submission_text" rows="2" required placeholder="Enter your assignment response..." class="w-full border border-slate-300 rounded px-3 py-1.5 text-sm"></textarea>
+            </div>
+          {% endif %}
+          <button type="submit" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2 rounded">
+            Submit New Attempt
+          </button>
+        </form>
+
+        <!-- Attempt History for this Assessment -->
+        {% if a.learner_attempts %}
+          <div class="text-xs space-y-1">
+            <div class="font-semibold text-slate-700">Your Attempt History ({{ a.learner_attempts|length }} kept):</div>
+            {% for att in a.learner_attempts %}
+              <div class="flex gap-4 text-slate-600">
+                <span class="font-mono">{{ att.attempt_id }}</span>
+                <span>Submitted: {{ att.submitted_on }}</span>
+                <span>Score: <strong>{% if att.score != None %}{{ att.score }}%{% else %}Pending Instructor Mark{% endif %}</strong></span>
+                <span>Graded by: {{ att.graded_by|default:"auto" }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    {% empty %}
+      <p class="text-sm text-slate-500">No published assessments for this cohort.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

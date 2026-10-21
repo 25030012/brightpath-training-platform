@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="space-y-8">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold">Instructor Portal — Courses, Assessments & Grading</h1>
+      <p class="text-sm text-slate-600">Signed in as <strong>{{ staff.full_name }} ({{ staff.staff_id }})</strong> · Specialism: {{ staff.specialism|default:"General" }}</p>
+    </div>
+    <a href="/instructor/reports/" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold px-4 py-2 rounded text-sm">
+      View Cohort Learner Results →
+    </a>
+  </div>
+
+  <!-- Create New Course Cohort (Starts as Draft) -->
+  <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+    <h2 class="text-lg font-bold mb-3">Create New Course Cohort (Starts as Draft)</h2>
+    <form method="post" action="/instructor/courses/create/" class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+      <div>
+        <label class="block font-medium text-slate-700 mb-1">Course Title</label>
+        <input name="title" required placeholder="e.g. Applied SQL for Analysts" class="w-full border border-slate-300 rounded px-3 py-1.5" />
+      </div>
+      <div>
+        <label class="block font-medium text-slate-700 mb-1">Cohort ID (Slug)</label>
+        <input name="course_id" placeholder="e.g. applied-sql-2026-10" class="w-full border border-slate-300 rounded px-3 py-1.5" />
+      </div>
+      <div>
+        <label class="block font-medium text-slate-700 mb-1">Category</label>
+        <input name="category" value="Data" required class="w-full border border-slate-300 rounded px-3 py-1.5" />
+      </div>
+      <div>
+        <label class="block font-medium text-slate-700 mb-1">Cohort Label</label>
+        <input name="cohort" value="Oct 2026" required class="w-full border border-slate-300 rounded px-3 py-1.5" />
+      </div>
+      <div>
+        <label class="block font-medium text-slate-700 mb-1">Starts On</label>
+        <input name="starts_on" value="2026-10-01" required class="w-full border border-slate-300 rounded px-3 py-1.5" />
+      </div>
+      <div>
+        <label class="block font-medium text-slate-700 mb-1">Ends On</label>
+        <input name="ends_on" value="2027-03-31" required class="w-full border border-slate-300 rounded px-3 py-1.5" />
+      </div>
+      <div class="sm:col-span-3">
+        <label class="block font-medium text-slate-700 mb-1">Description</label>
+        <input name="description" placeholder="Course summary..." class="w-full border border-slate-300 rounded px-3 py-1.5" />
+      </div>
+      <div class="sm:col-span-3">
+        <button type="submit" class="bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-2 rounded">
+          Create Draft Course
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- My Assigned Cohorts -->
+  <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+    <h2 class="text-lg font-bold mb-4">My Assigned Cohorts (Editable)</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {% for c in my_courses %}
+        <div class="border border-slate-200 rounded-lg p-4 flex flex-col justify-between bg-slate-50">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-mono text-xs text-slate-500">{{ c.course_id }}</span>
+              {% if c.status == "published" %}
+                <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-0.5 rounded uppercase">published</span>
+              {% else %}
+                <span class="bg-amber-100 text-amber-800 text-xs font-bold px-2 py-0.5 rounded uppercase">draft</span>
+              {% endif %}
+            </div>
+            <h3 class="font-bold text-base">{{ c.title }} ({{ c.cohort }})</h3>
+            <p class="text-xs text-slate-600 mt-1">{{ c.description }}</p>
+            <p class="text-xs text-slate-500 mt-2">
+              Pages: <strong>{{ c.pages.count }}</strong> · Assessments: <strong>{{ c.assessments.count }}</strong>
+            </p>
+          </div>
+          <div class="mt-4 flex gap-2">
+            <a href="/instructor/courses/{{ c.course_id }}/edit/" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3 py-1.5 rounded">
+              Edit Pages, Quizzes & Grading →
+            </a>
+          </div>
+        </div>
+      {% empty %}
+        <p class="text-sm text-slate-500">You have no active cohort assignments yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Ungraded Hand-Marked Assignments -->
+  <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+    <h2 class="text-lg font-bold mb-3">Pending Assignment Submissions (Hand-Grading Queue)</h2>
+    <table class="w-full text-sm text-left border-collapse">
+      <thead>
+        <tr class="border-b border-slate-200 text-slate-600 bg-slate-50">
+          <th class="py-2 px-3">Attempt ID</th>
+          <th class="py-2 px-3">Learner</th>
+          <th class="py-2 px-3">Cohort / Assessment</th>
+          <th class="py-2 px-3">Submitted</th>
+          <th class="py-2 px-3">Submission Work</th>
+          <th class="py-2 px-3">Mark Score (0–100)</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for a in ungraded_attempts %}
+          <tr>
+            <td class="py-2 px-3 font-mono text-xs">{{ a.attempt_id }}</td>
+            <td class="py-2 px-3">{{ a.learner.full_name }} ({{ a.learner.learner_id }})</td>
+            <td class="py-2 px-3">{{ a.assessment.title }} <span class="text-xs text-slate-500">({{ a.course_id }})</span></td>
+            <td class="py-2 px-3">{{ a.submitted_on }}</td>
+            <td class="py-2 px-3 text-xs text-slate-700">{{ a.submission_text|default:"(Spreadsheet submission)" }}</td>
+            <td class="py-2 px-3">
+              <form method="post" action="/instructor/attempts/{{ a.attempt_id }}/grade/" class="flex gap-2 items-center">
+                <input name="score" type="number" step="0.1" min="0" max="100" required placeholder="Score" class="border border-slate-300 rounded px-2 py-1 w-20 text-xs" />
+                <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold px-2.5 py-1 rounded">
+                  Save Mark
+                </button>
+              </form>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" class="py-4 text-center text-slate-500">No ungraded submissions waiting in your cohorts.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

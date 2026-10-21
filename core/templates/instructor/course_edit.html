@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="space-y-8">
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <a href="/instructor/" class="text-sm text-slate-600 hover:underline">← Back to Instructor Home</a>
+      <h1 class="text-2xl font-bold mt-1">{{ course.title }} ({{ course.cohort }})</h1>
+      <p class="text-sm text-slate-600 font-mono">
+        {{ course.course_id }} · Status:
+        {% if course.status == "published" %}
+          <span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold uppercase text-xs">published (visible to learners)</span>
+        {% else %}
+          <span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold uppercase text-xs">draft (hidden from learners)</span>
+        {% endif %}
+      </p>
+    </div>
+
+    <div class="flex gap-2">
+      {% if course.status == "draft" %}
+        <form method="post" action="/instructor/courses/{{ course.course_id }}/publish/">
+          <input type="hidden" name="status" value="published" />
+          <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold px-4 py-2 rounded text-sm">
+            Publish Course Cohort
+          </button>
+        </form>
+      {% else %}
+        <form method="post" action="/instructor/courses/{{ course.course_id }}/publish/">
+          <input type="hidden" name="status" value="draft" />
+          <button type="submit" class="bg-amber-600 hover:bg-amber-700 text-white font-semibold px-4 py-2 rounded text-sm">
+            Revert to Draft
+          </button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Course Pages (Text, Image, PDF) -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+      <h2 class="text-lg font-bold">Course Pages ({{ pages.count }})</h2>
+      {% for p in pages %}
+        <div class="border border-slate-200 rounded p-3 bg-slate-50 space-y-2">
+          <div class="font-bold text-sm">Page {{ p.order }}: {{ p.title }}</div>
+          <p class="text-xs text-slate-700 whitespace-pre-line">{{ p.body_text }}</p>
+          {% if p.image_path %}
+            <div>
+              <span class="text-xs font-medium text-slate-500">Attached Image:</span>
+              <img src="{{ p.image_path }}" alt="{{ p.title }}" class="mt-1 max-h-32 rounded border" />
+            </div>
+          {% endif %}
+          {% if p.pdf_path %}
+            <div>
+              <a href="{{ p.pdf_path }}" target="_blank" class="text-xs text-blue-700 underline font-medium">📄 View Attached PDF ({{ p.pdf_path }})</a>
+            </div>
+          {% endif %}
+        </div>
+      {% empty %}
+        <p class="text-sm text-slate-500">No content pages added yet.</p>
+      {% endfor %}
+
+      <hr class="my-4" />
+      <h3 class="font-bold text-sm">Add Content Page (Text, Image, PDF)</h3>
+      <form method="post" enctype="multipart/form-data" action="/instructor/courses/{{ course.course_id }}/pages/create/" class="space-y-3 text-sm">
+        <div class="flex gap-2">
+          <input name="order" type="number" value="{{ pages.count|add:1 }}" class="border border-slate-300 rounded px-2 py-1.5 w-20" placeholder="Order" />
+          <input name="title" required placeholder="Page Title (e.g. Week 1 Reading)" class="flex-1 border border-slate-300 rounded px-3 py-1.5" />
+        </div>
+        <div>
+          <textarea name="body_text" rows="3" placeholder="Lesson text..." class="w-full border border-slate-300 rounded px-3 py-1.5"></textarea>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+          <div>
+            <label class="block font-medium text-slate-700 mb-1">Optional Image</label>
+            <input type="file" name="image" accept="image/*" class="w-full" />
+          </div>
+          <div>
+            <label class="block font-medium text-slate-700 mb-1">Optional PDF</label>
+            <input type="file" name="pdf" accept=".pdf,application/pdf" class="w-full" />
+          </div>
+        </div>
+        <button type="submit" class="bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-1.5 rounded text-sm">
+          Add Page
+        </button>
+      </form>
+    </div>
+
+    <!-- Assessments (Multiple-Choice Quizzes & Hand-Marked Assignments) -->
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+      <h2 class="text-lg font-bold">Assessments ({{ assessments.count }})</h2>
+      <div class="space-y-2 max-h-64 overflow-y-auto">
+        {% for a in assessments %}
+          <div class="border border-slate-200 rounded p-3 bg-slate-50 flex items-center justify-between text-xs">
+            <div>
+              <span class="font-mono text-slate-500">{{ a.assessment_id }}</span> ·
+              <strong>{{ a.title }}</strong> [{{ a.type }}] · Weight: {{ a.weight_pct }}% · Due: {{ a.due_on|default:"N/A" }}
+              · Questions: {{ a.questions.count }}
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="uppercase font-bold {% if a.status == 'published' %}text-emerald-700{% else %}text-amber-700{% endif %}">{{ a.status }}</span>
+              {% if a.status == "draft" %}
+                <form method="post" action="/instructor/assessments/{{ a.assessment_id }}/publish/">
+                  <button type="submit" class="bg-emerald-700 text-white px-2 py-0.5 rounded">Publish</button>
+                </form>
+              {% endif %}
+            </div>
+          </div>
+        {% empty %}
+          <p class="text-sm text-slate-500">No assessments yet.</p>
+        {% endfor %}
+      </div>
+
+      <hr class="my-4" />
+      <h3 class="font-bold text-sm">Add Multiple-Choice Quiz or Hand-Marked Assignment</h3>
+      <form method="post" action="/instructor/courses/{{ course.course_id }}/assessments/create/" class="space-y-3 text-xs">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-medium mb-1">Title</label>
+            <input name="title" required placeholder="e.g. Module 1 Quiz" class="w-full border border-slate-300 rounded px-2 py-1.5" />
+          </div>
+          <div>
+            <label class="block font-medium mb-1">Type</label>
+            <select name="type" class="w-full border border-slate-300 rounded px-2 py-1.5">
+              <option value="Quiz">Quiz (Auto-marked Multiple Choice)</option>
+              <option value="Assignment">Assignment (Hand-marked by Instructor)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-medium mb-1">Due Date</label>
+            <input name="due_on" value="2026-11-15" class="w-full border border-slate-300 rounded px-2 py-1.5" />
+          </div>
+          <div>
+            <label class="block font-medium mb-1">Weight (%)</label>
+            <input name="weight_pct" type="number" value="25" class="w-full border border-slate-300 rounded px-2 py-1.5" />
+          </div>
+          <div>
+            <label class="block font-medium mb-1">Status</label>
+            <select name="status" class="w-full border border-slate-300 rounded px-2 py-1.5">
+              <option value="published">published</option>
+              <option value="draft">draft</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="p-3 bg-slate-50 rounded border border-slate-200 space-y-2">
+          <div class="font-semibold text-slate-700">Multiple-Choice Question 1 (for Quizzes)</div>
+          <input name="q1_prompt" placeholder="Question prompt (e.g. Which SQL clause filters grouped rows?)" class="w-full border border-slate-300 rounded px-2 py-1" />
+          <div class="grid grid-cols-2 gap-2">
+            <input name="q1_opt_a" placeholder="Option A (e.g. WHERE)" class="border border-slate-300 rounded px-2 py-1" />
+            <input name="q1_opt_b" placeholder="Option B (e.g. HAVING)" class="border border-slate-300 rounded px-2 py-1" />
+            <input name="q1_opt_c" placeholder="Option C (e.g. ORDER BY)" class="border border-slate-300 rounded px-2 py-1" />
+            <input name="q1_opt_d" placeholder="Option D (e.g. LIMIT)" class="border border-slate-300 rounded px-2 py-1" />
+          </div>
+          <div>
+            <label class="font-medium mr-2">Correct Option:</label>
+            <select name="q1_correct" class="border border-slate-300 rounded px-2 py-1">
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="C">C</option>
+              <option value="D">D</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" class="bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-1.5 rounded text-sm">
+          Create Assessment
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Attempts & Hand-Marking Table for this Cohort -->
+  <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+    <h2 class="text-lg font-bold mb-3">Recent Learner Attempts in This Cohort (Every Attempt Kept)</h2>
+    <table class="w-full text-sm text-left border-collapse">
+      <thead>
+        <tr class="border-b border-slate-200 text-slate-600 bg-slate-50">
+          <th class="py-2 px-3">Attempt ID</th>
+          <th class="py-2 px-3">Learner</th>
+          <th class="py-2 px-3">Assessment</th>
+          <th class="py-2 px-3">Submitted On</th>
+          <th class="py-2 px-3">Submission</th>
+          <th class="py-2 px-3">Score</th>
+          <th class="py-2 px-3">Graded By</th>
+          <th class="py-2 px-3">Hand-Mark</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for att in attempts %}
+          <tr>
+            <td class="py-2 px-3 font-mono text-xs">{{ att.attempt_id }}</td>
+            <td class="py-2 px-3">{{ att.learner.full_name }} ({{ att.learner.learner_id }})</td>
+            <td class="py-2 px-3">{{ att.assessment.title }} ({{ att.assessment.type }})</td>
+            <td class="py-2 px-3">{{ att.submitted_on }}</td>
+            <td class="py-2 px-3 text-xs">{{ att.submission_text|default:"—" }}</td>
+            <td class="py-2 px-3 font-bold">
+              {% if att.score != None %}{{ att.score }}{% else %}<span class="text-amber-600">Ungraded</span>{% endif %}
+            </td>
+            <td class="py-2 px-3 font-mono text-xs">{{ att.graded_by|default:"auto" }}</td>
+            <td class="py-2 px-3">
+              <form method="post" action="/instructor/attempts/{{ att.attempt_id }}/grade/" class="flex gap-1 items-center">
+                <input name="score" type="number" step="0.1" min="0" max="100" value="{{ att.score|default:'' }}" placeholder="0-100" required class="border border-slate-300 rounded px-2 py-0.5 w-20 text-xs" />
+                <button type="submit" class="bg-slate-800 text-white text-xs px-2 py-0.5 rounded">Mark</button>
+              </form>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="8" class="py-4 text-center text-slate-500">No attempts submitted yet for this cohort.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

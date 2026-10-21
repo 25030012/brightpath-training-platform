@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="space-y-8">
+  <div>
+    <h1 class="text-2xl font-bold">Learner Portal — {{ learner.full_name }} ({{ learner.learner_id }})</h1>
+    <p class="text-sm text-slate-600">
+      Client: <strong>{{ learner.client.name }} ({{ learner.client.client_id }})</strong> · Department: <strong>{{ learner.department }}</strong>
+    </p>
+  </div>
+
+  <!-- My Enrolments (Shows all runs including retakes & withdrawals, plus who enrolled them) -->
+  <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+    <h2 class="text-lg font-bold mb-3">My Cohort Enrolments & History (All Runs Kept)</h2>
+    <table class="w-full text-sm text-left border-collapse">
+      <thead>
+        <tr class="border-b border-slate-200 text-slate-600 bg-slate-50">
+          <th class="py-2 px-3">Enrolment ID</th>
+          <th class="py-2 px-3">Course & Cohort</th>
+          <th class="py-2 px-3">Enrolled On</th>
+          <th class="py-2 px-3">Enrolled By</th>
+          <th class="py-2 px-3">Prior Runs</th>
+          <th class="py-2 px-3">Outcome / Status</th>
+          <th class="py-2 px-3">Withdrawn On</th>
+          <th class="py-2 px-3">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for e in my_enrolments %}
+          <tr>
+            <td class="py-2 px-3 font-mono text-xs">{{ e.enrolment_id }}</td>
+            <td class="py-2 px-3 font-medium">
+              <a href="/learner/courses/{{ e.course.course_id }}/" class="text-blue-700 hover:underline">
+                {{ e.course.title }} ({{ e.course.cohort }})
+              </a>
+            </td>
+            <td class="py-2 px-3">{{ e.enrolled_on }}</td>
+            <td class="py-2 px-3 font-mono text-xs">{{ e.enrolled_by }}</td>
+            <td class="py-2 px-3">{{ e.previous_attempts }}</td>
+            <td class="py-2 px-3 font-semibold">{{ e.outcome }}</td>
+            <td class="py-2 px-3 text-rose-700">{{ e.withdrawn_on|default:"—" }}</td>
+            <td class="py-2 px-3 flex gap-2 items-center">
+              <a href="/learner/courses/{{ e.course.course_id }}/" class="bg-slate-900 text-white text-xs px-2.5 py-1 rounded">
+                Open Course
+              </a>
+              {% if not e.withdrawn_on and e.outcome != "Withdrawn" %}
+                <form method="post" action="/learner/enrolments/{{ e.enrolment_id }}/withdraw/">
+                  <button type="submit" class="bg-rose-600 hover:bg-rose-700 text-white text-xs px-2.5 py-1 rounded">
+                    Withdraw
+                  </button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="8" class="py-4 text-center text-slate-500">You have not enrolled in any cohorts yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Published Cohorts Catalogue (Drafts are never shown to learners) -->
+  <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+    <h2 class="text-lg font-bold mb-4">Published Course Cohorts Available for Enrolment</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {% for c in published_courses %}
+        <div class="border border-slate-200 rounded-lg p-4 flex flex-col justify-between bg-slate-50">
+          <div>
+            <span class="text-xs font-semibold uppercase text-amber-700">{{ c.category }} · {{ c.cohort }}</span>
+            <h3 class="font-bold text-base mt-0.5">{{ c.title }}</h3>
+            <p class="text-xs text-slate-600 mt-1">{{ c.description }}</p>
+            <p class="text-xs text-slate-500 mt-2 font-mono">{{ c.starts_on }} → {{ c.ends_on }}</p>
+          </div>
+          <div class="mt-4 flex gap-2">
+            <form method="post" action="/learner/courses/{{ c.course_id }}/enrol/">
+              <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold px-3 py-1.5 rounded">
+                Enrol Self (or Retake)
+              </button>
+            </form>
+            <a href="/learner/courses/{{ c.course_id }}/" class="border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 text-xs font-semibold px-3 py-1.5 rounded">
+              View Course
+            </a>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
