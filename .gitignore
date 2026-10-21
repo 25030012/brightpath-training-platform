@@ -1,0 +1,8 @@
+.venv/
+.pgdata/
+.superpowers/
+__pycache__/
+*.pyc
+media/
+db.sqlite3
+.pytest_cache/
