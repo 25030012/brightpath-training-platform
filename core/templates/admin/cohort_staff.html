@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="space-y-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <a href="/admin-portal/" class="text-sm text-slate-600 hover:underline">← Back to People & Cohorts</a>
+      <h1 class="text-2xl font-bold mt-1">Instructor Assignments — {{ course.title }} ({{ course.cohort }})</h1>
+      <p class="text-sm text-slate-600 font-mono">{{ course.course_id }}</p>
+    </div>
+  </div>
+
+  <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 max-w-xl">
+    <h2 class="text-lg font-bold mb-3">Assign Instructor to Cohort</h2>
+    <form method="post" action="/admin-portal/cohorts/{{ course.course_id }}/staff/assign/" class="flex flex-wrap gap-3 items-end text-sm">
+      <div class="flex-1 min-w-[200px]">
+        <label class="block font-medium text-slate-700 mb-1">Instructor</label>
+        <select name="staff_id" required class="w-full border border-slate-300 rounded px-3 py-1.5">
+          {% for i in instructors %}
+            <option value="{{ i.staff_id }}">{{ i.staff_id }} — {{ i.full_name }} ({{ i.specialism }}){% if i.left_on %} [Left {{ i.left_on }}]{% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block font-medium text-slate-700 mb-1">Role</label>
+        <select name="role" class="border border-slate-300 rounded px-3 py-1.5">
+          <option value="lead">lead</option>
+          <option value="co-instructor">co-instructor</option>
+        </select>
+      </div>
+      <button type="submit" class="bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-1.5 rounded">
+        Assign Instructor
+      </button>
+    </form>
+  </div>
+
+  <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+    <h2 class="text-lg font-bold mb-3">Assignment History (Kept Permanently)</h2>
+    <table class="w-full text-sm text-left border-collapse">
+      <thead>
+        <tr class="border-b border-slate-200 text-slate-600 bg-slate-50">
+          <th class="py-2 px-3">Staff ID</th>
+          <th class="py-2 px-3">Instructor Name</th>
+          <th class="py-2 px-3">Role</th>
+          <th class="py-2 px-3">Assigned On</th>
+          <th class="py-2 px-3">Unassigned On</th>
+          <th class="py-2 px-3">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for a in assignments %}
+          <tr>
+            <td class="py-2 px-3 font-mono">{{ a.staff.staff_id }}</td>
+            <td class="py-2 px-3 font-medium">{{ a.staff.full_name }}</td>
+            <td class="py-2 px-3">{{ a.role }}</td>
+            <td class="py-2 px-3">{{ a.assigned_on }}</td>
+            <td class="py-2 px-3">
+              {% if a.unassigned_on %}
+                <span class="text-rose-700 font-medium">{{ a.unassigned_on }}</span>
+              {% else %}
+                <span class="text-emerald-700 font-semibold">Currently Assigned</span>
+              {% endif %}
+            </td>
+            <td class="py-2 px-3">
+              {% if not a.unassigned_on %}
+                <form method="post" action="/admin-portal/cohorts/{{ course.course_id }}/staff/{{ a.id }}/unassign/">
+                  <button type="submit" class="text-xs bg-rose-600 hover:bg-rose-700 text-white px-3 py-1 rounded">
+                    Take Off Cohort
+                  </button>
+                </form>
+              {% else %}
+                <span class="text-xs text-slate-400">History preserved</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" class="py-4 text-center text-slate-500">No instructors have been assigned to this cohort yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
