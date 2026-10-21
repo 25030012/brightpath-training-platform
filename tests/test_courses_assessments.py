@@ -145,3 +145,31 @@ def test_course_draft_visibility_quiz_autograde_and_retake_highest_score(client,
     asgn_attempt.refresh_from_db()
     assert asgn_attempt.score == 88.0
     assert asgn_attempt.graded_by == "S007"
+    enrol = Enrolment.objects.get(course=course, learner=learner)
+    assert enrol.outcome == "Distinction"
+
+    # Adding a second question to an existing Quiz and rejecting invalid upload extensions
+    client.post(
+        f"/instructor/assessments/{quiz.assessment_id}/questions/create/",
+        {
+            "prompt": "What is 3+3?",
+            "option_a": "5",
+            "option_b": "6",
+            "option_c": "7",
+            "option_d": "8",
+            "correct_option": "B",
+        },
+    )
+    assert quiz.questions.count() == 2
+
+    bad_file = SimpleUploadedFile("malware.exe", b"MZ...", content_type="application/octet-stream")
+    r_bad = client.post(
+        f"/instructor/courses/{course.course_id}/pages/create/",
+        {
+            "title": "Bad Upload Page",
+            "body_text": "Should reject .exe",
+            "order": "2",
+            "image": bad_file,
+        },
+    )
+    assert r_bad.status_code == 400

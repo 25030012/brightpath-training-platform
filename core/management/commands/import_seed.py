@@ -3,6 +3,7 @@ import os
 from collections import Counter
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from core.auth import hash_password
 from core.models import (
     Client,
     Staff,
@@ -23,6 +24,7 @@ def _read_csv(data_dir: str, name: str):
 
 def run_import(data_dir: str = "data", stdout=None) -> dict:
     stats = {}
+    default_pw_hash = hash_password("password123")
 
     def record(table: str, inserted: int, reasons: Counter):
         stats[table] = {
@@ -88,10 +90,11 @@ def run_import(data_dir: str = "data", stdout=None) -> dict:
                     specialism=r["specialism"].strip(),
                     joined_on=r["joined_on"].strip(),
                     left_on=r["left_on"].strip(),
-                    password_hash="password123",
+                    password_hash=default_pw_hash,
                 )
             )
         Staff.objects.bulk_create(staff_objs, ignore_conflicts=True)
+        Staff.objects.filter(password_hash="password123").update(password_hash=default_pw_hash)
         record("staff", len(staff_objs), staff_reasons)
 
         # 3. courses.csv
@@ -199,10 +202,11 @@ def run_import(data_dir: str = "data", stdout=None) -> dict:
                     account_created_on=created_on,
                     created_by=r["created_by"].strip(),
                     account_status=r["account_status"].strip() or "active",
-                    password_hash="password123",
+                    password_hash=default_pw_hash,
                 )
             )
         Learner.objects.bulk_create(learner_objs, batch_size=5000, ignore_conflicts=True)
+        Learner.objects.filter(password_hash="password123").update(password_hash=default_pw_hash)
         record("learners", len(learner_objs), learner_reasons)
 
         # 7. enrolments.csv

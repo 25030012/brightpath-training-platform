@@ -1,6 +1,20 @@
 from functools import wraps
-from django.http import HttpResponseForbidden
+import hmac
+from django.contrib.auth.hashers import make_password, check_password
+from django.shortcuts import render
 from core.models import Staff, Learner
+
+
+def hash_password(raw_password: str) -> str:
+    return make_password(raw_password)
+
+
+def verify_password(raw_password: str, stored_hash: str) -> bool:
+    if not stored_hash:
+        return False
+    if stored_hash.startswith("pbkdf2_"):
+        return check_password(raw_password, stored_hash)
+    return hmac.compare_digest(stored_hash, raw_password)
 
 
 def auth_context(request):
@@ -18,8 +32,14 @@ def require_role(*allowed_roles):
         def _wrapped(request, *args, **kwargs):
             role = request.session.get("user_role")
             if not role or role not in allowed_roles:
-                return HttpResponseForbidden(
-                    "403 Forbidden: Your role does not have access to this page."
+                return render(
+                    request,
+                    "403.html",
+                    {
+                        "required_roles": ", ".join(allowed_roles),
+                        "current_role": role or "unauthenticated",
+                    },
+                    status=403,
                 )
             return view_func(request, *args, **kwargs)
 

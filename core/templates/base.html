@@ -40,6 +40,15 @@
   </header>
 
   <main class="max-w-7xl w-full mx-auto px-4 py-6 flex-1">
+    {% if messages %}
+      <div class="mb-6 space-y-2">
+        {% for message in messages %}
+          <div class="px-4 py-3 rounded-lg text-sm font-medium border flex items-center justify-between {% if message.tags == 'error' %}bg-rose-50 border-rose-200 text-rose-800{% elif message.tags == 'warning' %}bg-amber-50 border-amber-200 text-amber-800{% else %}bg-emerald-50 border-emerald-200 text-emerald-800{% endif %}">
+            <span>{{ message }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
     {% block content %}{% endblock %}
   </main>
 </body>

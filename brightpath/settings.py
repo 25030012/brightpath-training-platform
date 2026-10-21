@@ -5,12 +5,13 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "brightpath-dev-secret-key-hw4")
-DEBUG = True
+DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 ALLOWED_HOSTS = ["*"]
 
 INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
+    "django.contrib.messages",
     "django.contrib.staticfiles",
     "core",
 ]
@@ -19,9 +20,11 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
 ]
 
 SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
+MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
 ROOT_URLCONF = "brightpath.urls"
 
 TEMPLATES = [
@@ -32,11 +35,13 @@ TEMPLATES = [
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.request",
+                "django.contrib.messages.context_processors.messages",
                 "core.auth.auth_context",
             ],
         },
     },
 ]
+
 
 def _can_connect_postgres(sock_path="/tmp/.s.PGSQL.5433"):
     if os.environ.get("FORCE_SQLITE") == "1":
@@ -51,6 +56,7 @@ def _can_connect_postgres(sock_path="/tmp/.s.PGSQL.5433"):
         return True
     except OSError:
         return False
+
 
 if _can_connect_postgres():
     DATABASES = {

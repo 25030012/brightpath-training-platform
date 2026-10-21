@@ -1,9 +1,11 @@
 from datetime import date
 import uuid
+from django.contrib import messages
+from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import HttpResponseForbidden
 from django.shortcuts import render, redirect, get_object_or_404
-from core.auth import require_role, get_current_staff
+from core.auth import require_role, get_current_staff, hash_password
 from core.models import Client, Staff, Learner, Course, CourseStaff, Enrolment
 
 
@@ -13,16 +15,18 @@ def admin_home(request):
     q = (request.GET.get("q") or "").strip()
     dept_filter = (request.GET.get("department") or "").strip()
     client_filter = (request.GET.get("client_id") or "").strip()
+    page_num = request.GET.get("page") or "1"
 
     if staff.client_id:
         clients = Client.objects.filter(client_id=staff.client_id)
-        learners_qs = Learner.objects.filter(client_id=staff.client_id).select_related("client")
+        base_learners_qs = Learner.objects.filter(client_id=staff.client_id)
     else:
         clients = Client.objects.all().order_by("client_id")
-        learners_qs = Learner.objects.all().select_related("client")
-        if client_filter:
-            learners_qs = learners_qs.filter(client_id=client_filter)
+        base_learners_qs = Learner.objects.all()
 
+    learners_qs = base_learners_qs.select_related("client")
+    if not staff.client_id and client_filter:
+        learners_qs = learners_qs.filter(client_id=client_filter)
     if dept_filter:
         learners_qs = learners_qs.filter(department__iexact=dept_filter)
     if q:
@@ -33,7 +37,10 @@ def admin_home(request):
             | Q(department__icontains=q)
         )
 
-    learners = list(learners_qs.order_by("-account_created_on", "learner_id")[:100])
+    ordered_qs = learners_qs.order_by("-account_created_on", "learner_id")
+    paginator = Paginator(ordered_qs, 50)
+    page_obj = paginator.get_page(page_num)
+
     cohorts = Course.objects.prefetch_related("staff_assignments__staff").order_by("course_id")
     published_cohorts = Course.objects.filter(status="published").order_by("course_id")
 
@@ -43,8 +50,11 @@ def admin_home(request):
         {
             "staff": staff,
             "clients": clients,
-            "learners": learners,
-            "total_learners_count": learners_qs.count(),
+            "learners": page_obj.object_list,
+            "page_obj": page_obj,
+            "total_learners_count": paginator.count,
+            "active_learners_count": base_learners_qs.filter(account_status="active").count(),
+            "deactivated_learners_count": base_learners_qs.filter(account_status="deactivated").count(),
             "cohorts": cohorts,
             "published_cohorts": published_cohorts,
             "q": q,
@@ -70,17 +80,20 @@ def create_learner(request):
     department = (request.POST.get("department") or "").strip()
     password = (request.POST.get("password") or "password123").strip()
 
-    Learner.objects.create(
+    Learner.objects.update_or_create(
         learner_id=learner_id,
-        full_name=full_name,
-        email=email,
-        client=client_obj,
-        department=department,
-        account_created_on=date.today().isoformat(),
-        created_by=staff.staff_id,
-        account_status="active",
-        password_hash=password,
+        defaults={
+            "full_name": full_name,
+            "email": email,
+            "client": client_obj,
+            "department": department,
+            "account_created_on": date.today().isoformat(),
+            "created_by": staff.staff_id,
+            "account_status": "active",
+            "password_hash": hash_password(password),
+        },
     )
+    messages.success(request, f"Learner {full_name} ({learner_id}) created in {client_obj.name} · {department}.")
     return redirect(f"/admin-portal/?q={learner_id}")
 
 
@@ -94,6 +107,7 @@ def deactivate_learner(request, learner_id):
         return HttpResponseForbidden("403 Forbidden: Cannot manage another client's learner.")
     learner.account_status = "deactivated"
     learner.save(update_fields=["account_status"])
+    messages.warning(request, f"Learner {learner.full_name} ({learner.learner_id}) has been deactivated (record preserved).")
     return redirect(f"/admin-portal/?q={learner.learner_id}")
 
 
@@ -130,6 +144,7 @@ def admin_enrol_learner(request):
             activity_clicks=0,
             enrolled_by=staff.staff_id,
         )
+        messages.success(request, f"Enrolled {learner.full_name} ({learner.learner_id}) in {course.title} ({course.cohort}).")
     return redirect(f"/admin-portal/?q={learner.learner_id}")
 
 
@@ -172,6 +187,7 @@ def assign_cohort_staff(request, course_id):
             assigned_on=today_str,
             unassigned_on="",
         )
+    messages.success(request, f"Assigned {instructor.full_name} ({instructor.staff_id}) to {course.title} ({course.cohort}).")
     return redirect(f"/admin-portal/cohorts/{course_id}/staff/")
 
 
@@ -182,4 +198,5 @@ def unassign_cohort_staff(request, course_id, assignment_id):
     cs = get_object_or_404(CourseStaff, id=assignment_id, course_id=course_id)
     cs.unassigned_on = date.today().isoformat()
     cs.save(update_fields=["unassigned_on"])
+    messages.info(request, f"Unassigned {cs.staff.full_name} from {course_id} (assignment history preserved).")
     return redirect(f"/admin-portal/cohorts/{course_id}/staff/")

@@ -5,6 +5,7 @@ from core import views_auth, views_admin, views_instructor, views_learner, views
 
 urlpatterns = [
     path("", views_auth.index_view, name="index"),
+    path("healthz/", views_auth.healthz_view, name="healthz"),
     path("login/", views_auth.login_view, name="login"),
     path("logout/", views_auth.logout_view, name="logout"),
     # Administrator
@@ -25,6 +26,7 @@ urlpatterns = [
     path("instructor/courses/<str:course_id>/pages/create/", views_instructor.create_course_page, name="create_course_page"),
     path("instructor/courses/<str:course_id>/assessments/create/", views_instructor.create_assessment, name="create_assessment"),
     path("instructor/assessments/<str:assessment_id>/publish/", views_instructor.publish_assessment, name="publish_assessment"),
+    path("instructor/assessments/<str:assessment_id>/questions/create/", views_instructor.add_quiz_question, name="add_quiz_question"),
     path("instructor/attempts/<str:attempt_id>/grade/", views_instructor.grade_attempt, name="grade_attempt"),
     path("instructor/reports/", views_reports.instructor_reports, name="instructor_reports"),
     path("instructor/reports/csv/", views_reports.instructor_reports_csv, name="instructor_reports_csv"),

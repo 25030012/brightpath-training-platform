@@ -1,10 +1,12 @@
 from datetime import date
 import uuid
+from django.contrib import messages
 from django.db.models import Max
 from django.http import Http404
 from django.shortcuts import render, redirect, get_object_or_404
 from core.auth import require_role, get_current_learner
 from core.models import Course, Assessment, Enrolment, Attempt
+from core.views_instructor import recalculate_enrolment_outcome
 
 
 @require_role("learner")
@@ -45,9 +47,11 @@ def learner_enrol(request, course_id):
     learner = get_current_learner(request)
     course = get_object_or_404(Course, course_id=course_id, status="published")
 
-    active_run = Enrolment.objects.filter(
-        learner=learner, course=course, withdrawn_on=""
-    ).exclude(outcome__in=["Fail", "Pass", "Distinction", "Withdrawn"]).first()
+    active_run = (
+        Enrolment.objects.filter(learner=learner, course=course, withdrawn_on="")
+        .exclude(outcome__in=["Fail", "Pass", "Distinction", "Withdrawn"])
+        .first()
+    )
     if not active_run:
         prev_runs = Enrolment.objects.filter(
             learner=learner, course__title=course.title
@@ -63,6 +67,7 @@ def learner_enrol(request, course_id):
             activity_clicks=1,
             enrolled_by="self",
         )
+        messages.success(request, f"Enrolled in {course.title} ({course.cohort}).")
     return redirect(f"/learner/courses/{course.course_id}/")
 
 
@@ -75,6 +80,7 @@ def learner_withdraw(request, enrolment_id):
     enrolment.withdrawn_on = date.today().isoformat()
     enrolment.outcome = "Withdrawn"
     enrolment.save(update_fields=["withdrawn_on", "outcome"])
+    messages.info(request, f"Withdrawn from {enrolment.course.title} (history preserved).")
     return redirect("/learner/")
 
 
@@ -102,7 +108,6 @@ def learner_course_detail(request, course_id):
         .order_by("-submitted_on", "-attempt_id")
     )
 
-    # Retake rule: highest score across all attempts for each assessment
     highest_by_assessment = {}
     attempts_by_assessment = {}
     for att in attempts:
@@ -142,8 +147,9 @@ def learner_submit_assessment(request, assessment_id):
     if course.status != "published":
         raise Http404("Course is not published.")
 
-    # Ensure learner has an enrolment record in this course
-    if not Enrolment.objects.filter(learner=learner, course=course, withdrawn_on="").exists():
+    if not Enrolment.objects.filter(
+        learner=learner, course=course, withdrawn_on=""
+    ).exists():
         prev_runs = Enrolment.objects.filter(
             learner=learner, course__title=course.title
         ).count()
@@ -189,5 +195,17 @@ def learner_submit_assessment(request, assessment_id):
         graded_by=graded_by,
         submission_text=submission_text,
     )
+
+    if score is not None:
+        recalculate_enrolment_outcome(learner, course)
+        messages.success(
+            request,
+            f"Submitted '{assessment.title}' — Auto-graded Score: {score}%.",
+        )
+    else:
+        messages.info(
+            request,
+            f"Submitted '{assessment.title}' for instructor grading.",
+        )
 
     return redirect(f"/learner/courses/{course.course_id}/")

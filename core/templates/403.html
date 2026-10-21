@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-lg mx-auto mt-12 bg-white p-8 rounded-xl shadow border border-rose-200 text-center space-y-4">
+  <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-rose-100 text-rose-700 font-bold text-lg">
+    403
+  </div>
+  <h1 class="text-2xl font-bold text-slate-900">403 Forbidden — Access Refused</h1>
+  <p class="text-sm text-slate-600">
+    Your current role (<strong>{{ current_role }}</strong>) is not permitted to access this page (requires: <strong>{{ required_roles }}</strong>).
+  </p>
+  <div class="pt-2">
+    <a href="/" class="inline-block bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-2 rounded text-sm">
+      Return to Your Home Page
+    </a>
+  </div>
+</div>
+{% endblock %}

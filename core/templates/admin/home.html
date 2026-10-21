@@ -17,6 +17,26 @@
     </a>
   </div>
 
+  <!-- Summary KPI Cards -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+      <div class="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Filtered Learners</div>
+      <div class="text-2xl font-bold text-slate-900 mt-1">{{ total_learners_count }}</div>
+    </div>
+    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+      <div class="text-xs font-semibold uppercase tracking-wider text-emerald-700">Active Accounts</div>
+      <div class="text-2xl font-bold text-emerald-700 mt-1">{{ active_learners_count }}</div>
+    </div>
+    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+      <div class="text-xs font-semibold uppercase tracking-wider text-rose-700">Deactivated (Kept)</div>
+      <div class="text-2xl font-bold text-rose-700 mt-1">{{ deactivated_learners_count }}</div>
+    </div>
+    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+      <div class="text-xs font-semibold uppercase tracking-wider text-slate-500">Course Cohorts</div>
+      <div class="text-2xl font-bold text-slate-900 mt-1">{{ cohorts|length }}</div>
+    </div>
+  </div>
+
   <!-- Top Actions Grid: Create Learner & Enrol Learner -->
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
@@ -146,6 +166,22 @@
         </tbody>
       </table>
     </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+      <div class="flex items-center justify-between border-t border-slate-200 pt-4 mt-4 text-xs text-slate-600">
+        <div>
+          Showing page <strong>{{ page_obj.number }}</strong> of <strong>{{ page_obj.paginator.num_pages }}</strong> ({{ total_learners_count }} learners)
+        </div>
+        <div class="flex gap-2">
+          {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&client_id={{ client_filter }}" class="px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded font-medium text-slate-800">← Previous</a>
+          {% endif %}
+          {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&client_id={{ client_filter }}" class="px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded font-medium text-slate-800">Next →</a>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
   </div>
 
   <!-- Cohorts & Instructor Assignments -->

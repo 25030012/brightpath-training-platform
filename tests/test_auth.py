@@ -69,3 +69,40 @@ def test_signin_roles_and_rbac(client):
     assert r_adm.status_code == 302 and r_adm.url == "/admin-portal/"
     assert client.get("/instructor/").status_code == 403
     assert client.get("/learner/").status_code == 403
+
+
+@pytest.mark.django_db
+def test_pbkdf2_password_hashing_for_new_and_imported_users(client):
+    from core.auth import hash_password, verify_password
+
+    cl = Client.objects.create(client_id="CL01", name="Northwind", seats=100)
+    hashed = hash_password("secret999")
+    assert hashed.startswith("pbkdf2_sha256$")
+    assert verify_password("secret999", hashed) is True
+    assert verify_password("wrong", hashed) is False
+
+    Staff.objects.create(
+        staff_id="S001",
+        full_name="Admin",
+        email="admin@bp.example",
+        role="administrator",
+        password_hash=hashed,
+    )
+    r_ok = client.post("/login/", {"username": "S001", "password": "secret999"})
+    assert r_ok.status_code == 302 and r_ok.url == "/admin-portal/"
+
+    # Creating a learner hashes their password in the database
+    client.post(
+        "/admin-portal/learners/create/",
+        {
+            "learner_id": "L_HASH_1",
+            "full_name": "Hashed Learner",
+            "email": "hashed@bp.example",
+            "client_id": "CL01",
+            "department": "Security",
+            "password": "my_secure_password",
+        },
+    )
+    l_obj = Learner.objects.get(learner_id="L_HASH_1")
+    assert l_obj.password_hash.startswith("pbkdf2_sha256$")
+    assert verify_password("my_secure_password", l_obj.password_hash) is True
